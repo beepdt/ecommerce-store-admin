@@ -1,0 +1,122 @@
+import Stripe from "stripe";
+import { NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
+import prismadb from "@/lib/prismadb";
+
+const corsHeader = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+//rate limit
+const rateLimitMap = new Map();
+
+function rateLimit(identifier: string, limit = 5, window = 60000) {
+  const now = Date.now();
+  const userRequests = rateLimitMap.get(identifier) || [];
+
+  // Remove expired requests
+  const validRequests = userRequests.filter(
+    (time: number) => now - time < window
+  );
+
+  if (validRequests.length >= limit) {
+    return false;
+  }
+
+  validRequests.push(now);
+  rateLimitMap.set(identifier, validRequests);
+  return true;
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeader });
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: { storeId: string } }
+) {
+
+    
+    //rate-limit
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded
+    ? forwarded.split(",")[0]
+    : req.headers.get("x-real-ip") || "anonymous";
+
+  if (!rateLimit(ip, 5, 60000)) {
+    // 5 requests per minute
+    return new NextResponse("Rate limit exceeded. Try again later.", {
+      status: 429,
+      headers: corsHeader,
+    });
+  }
+
+  const { productIds } = await req.json();
+
+  if (!productIds || productIds.length === 0) {
+    return new NextResponse("Product ids are required", { status: 400 });
+  }
+
+  const products = await prismadb.product.findMany({
+    where: {
+      id: {
+        in: productIds,
+      },
+    },
+  });
+
+  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+  products.forEach((product) => {
+    line_items.push({
+      quantity: 1,
+      price_data: {
+        currency: "INR",
+        product_data: {
+          name: product.name,
+        },
+        unit_amount: product.price.toNumber() * 100,
+      },
+    });
+  });
+
+  const order = await prismadb.order.create({
+    data: {
+      storeId: params.storeId,
+      isPaid: false,
+      orderItems: {
+        create: productIds.map((productId: string) => ({
+          product: {
+            connect: {
+              id: productId,
+            },
+          },
+        })),
+      },
+    },
+  });
+
+  const session = await stripe.checkout.sessions.create({
+    line_items,
+    mode: "payment",
+    billing_address_collection: "required",
+    phone_number_collection: {
+      enabled: true,
+    },
+    success_url: `${process.env.FRONTEND_STORE_URL}/cart?success=1`,
+    cancel_url: `${process.env.FRONTEND_STORE_URL}/cart?cancelled=1`,
+    metadata: {
+      orderId: order.id,
+    },
+  });
+
+  return NextResponse.json(
+    { url: session.url },
+    {
+      headers: corsHeader,
+    }
+  );
+}

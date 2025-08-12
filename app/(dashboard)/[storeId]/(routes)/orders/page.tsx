@@ -3,6 +3,7 @@ import BillboardsClient from "./components/client";
 import {  OrderColumn } from "./components/columns";
 import {format} from "date-fns";
 import { formatter } from "@/lib/utils";
+import OrderClient from "./components/client";
 
 const Orders = async ({ params }: { params: { storeId: string } }) => {
   const orders = await prismadb.order.findMany({
@@ -27,7 +28,7 @@ const Orders = async ({ params }: { params: { storeId: string } }) => {
     address:item.address,
     products:item.orderItems.map((item)=>item.product.name).join(', '),
     totalPrice:formatter.format(item.orderItems.reduce((total,item)=>{
-      return total = Number(item.product.price)
+      return total + Number(item.product.price)
     },0)),
     isPaid:item.isPaid,
 
@@ -37,7 +38,7 @@ const Orders = async ({ params }: { params: { storeId: string } }) => {
   return (
     <div className="flex-col">
       <div className="flex-1 space-y-4 p-8 pt=6">
-        <BillboardsClient data={formattedOrders}/>
+        <OrderClient data={formattedOrders}/>
       </div>
     </div>
   );
