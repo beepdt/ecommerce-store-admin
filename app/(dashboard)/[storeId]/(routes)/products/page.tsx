@@ -4,10 +4,11 @@ import {format} from "date-fns";
 import { formatter } from "@/lib/utils";
 import ProductsClient from "./components/client";
 
-const Products = async ({ params }: { params: { storeId: string } }) => {
+const Products = async ({ params }: { params: Promise<{ storeId: string }> }) => {
+  const {storeId} = await params
   const products = await prismadb.product.findMany({
     where: {
-      storeId: params.storeId,
+      storeId: storeId,
     },
     include:{
       category:true,

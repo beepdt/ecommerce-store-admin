@@ -5,10 +5,11 @@ import {format} from "date-fns";
 import SizesClient from "./components/client";
 import ColorsClient from "./components/client";
 
-const Colors = async ({ params }: { params: { storeId: string } }) => {
+const Colors = async ({ params }: { params: Promise<{ storeId: string }> }) => {
+  const {storeId} = await params
   const colors = await prismadb.color.findMany({
     where: {
-      storeId: params.storeId,
+      storeId: storeId,
     },
     orderBy: {
       createdAt: "desc",

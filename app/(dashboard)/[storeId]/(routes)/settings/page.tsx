@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import prismadb from "@/lib/prismadb";
 
 interface SettingsPageProps {
-  params: {
+  params: Promise<{
     storeId: string;
-  };
+  }>
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = async ({ params }) => {
+  const {storeId} = await params
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
@@ -17,7 +18,7 @@ const SettingsPage: React.FC<SettingsPageProps> = async ({ params }) => {
 
   const store = await prismadb.store.findFirst({
     where: {
-      id: params.storeId,
+      id: storeId,
       userId,
     },
   });

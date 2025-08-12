@@ -5,10 +5,11 @@ import {format} from "date-fns";
 import { formatter } from "@/lib/utils";
 import OrderClient from "./components/client";
 
-const Orders = async ({ params }: { params: { storeId: string } }) => {
+const Orders = async ({ params }: { params: Promise<{ storeId: string }> }) => {
+  const {storeId} = await params
   const orders = await prismadb.order.findMany({
     where: {
-      storeId: params.storeId,
+      storeId: storeId,
     },
     include:{
       orderItems:{

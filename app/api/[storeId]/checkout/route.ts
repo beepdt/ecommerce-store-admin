@@ -36,11 +36,10 @@ export async function OPTIONS() {
 
 export async function POST(
   req: Request,
-  { params }: { params: { storeId: string } }
+  { params }: { params: Promise<{ storeId: string }> }
 ) {
-
-    
-    //rate-limit
+  const {storeId} = await params
+  //rate-limit
   const forwarded = req.headers.get("x-forwarded-for");
   const ip = forwarded
     ? forwarded.split(",")[0]
@@ -85,7 +84,7 @@ export async function POST(
 
   const order = await prismadb.order.create({
     data: {
-      storeId: params.storeId,
+      storeId: storeId,
       isPaid: false,
       orderItems: {
         create: productIds.map((productId: string) => ({

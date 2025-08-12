@@ -9,14 +9,15 @@ import { Overview } from "@/components/ui/overview";
 import { getGraphData } from "@/actions/get-graph-data";
 
 interface DashboardPageProps {
-  params: { storeId: string };
+  params: Promise<{ storeId: string }>;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = async ({ params }) => {
-  const totalRevenue =  await getTotalRevenue(params.storeId)
-  const totalSales = await getTotalSales(params.storeId)
-  const productStock = await getStock(params.storeId)
-  const graphData = await getGraphData(params.storeId)
+  const {storeId} = await params
+  const totalRevenue =  await getTotalRevenue(storeId)
+  const totalSales = await getTotalSales(storeId)
+  const productStock = await getStock(storeId)
+  const graphData = await getGraphData(storeId)
   return (
     <div className="px-8 py-8">
       <div className="mb-8">

@@ -3,10 +3,12 @@ import BillboardsClient from "./components/client";
 import { BillboardColumn } from "./components/columns";
 import {format} from "date-fns";
 
-const Billboards = async ({ params }: { params: { storeId: string } }) => {
+const Billboards = async ({ params }: { params: Promise<{ storeId: string }> }) => {
+
+  const {storeId} = await params
   const billboards = await prismadb.billboard.findMany({
     where: {
-      storeId: params.storeId,
+      storeId: storeId,
     },
     orderBy: {
       createdAt: "desc",
